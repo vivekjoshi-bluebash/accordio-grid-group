@@ -28,10 +28,20 @@ interface IssueData {
   severityLevel: string;
 }
 
-// Create a custom interface for cell renderer props
-interface CellRendererProps {
+// Create a custom interface for cell renderer props that extends ICellRendererParams
+interface CellRendererProps extends Partial<ICellRendererParams> {
   data?: IssueData;
   value?: any;
+  valueFormatted?: any;
+  node?: any;
+  rowIndex?: number;
+  eGridCell?: HTMLElement;
+  eParentOfValue?: HTMLElement;
+  api?: any;
+  columnApi?: any;
+  colDef?: any;
+  column?: any;
+  frameworkComponentInstance?: any;
 }
 
 // Custom cell renderer for the action column
@@ -143,6 +153,15 @@ export const DataQualityTable = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
 
+  // Initialize all groups as collapsed
+  useEffect(() => {
+    const initialExpandedState: Record<string, boolean> = {};
+    mockData.forEach(group => {
+      initialExpandedState[group.groupName] = false;
+    });
+    setExpandedGroups(initialExpandedState);
+  }, []);
+
   // Calculate total pages and records
   useEffect(() => {
     const recordCount = mockData.reduce((acc, group) => acc + group.children.length, 0);
@@ -151,6 +170,7 @@ export const DataQualityTable = () => {
   }, [recordsPerPage]);
 
   const toggleGroup = (groupName: string) => {
+    console.log('Toggling group:', groupName);
     setExpandedGroups(prev => ({
       ...prev,
       [groupName]: !prev[groupName]
@@ -223,27 +243,27 @@ export const DataQualityTable = () => {
             <TableBody>
               {visibleGroups.map((group) => (
                 <React.Fragment key={group.groupName}>
-                  <TableRow 
-                    className="hover:bg-gray-100 cursor-pointer border-b-0"
-                    onClick={() => toggleGroup(group.groupName)}
-                  >
-                    <TableCell colSpan={13} className="p-0 border-b-0">
+                  {/* Group Header Row */}
+                  <TableRow className="hover:bg-gray-100 cursor-pointer">
+                    <TableCell colSpan={13} className="p-0">
                       <Collapsible 
-                        open={expandedGroups[group.groupName]} 
+                        open={expandedGroups[group.groupName] || false} 
                         onOpenChange={() => toggleGroup(group.groupName)}
                       >
-                        <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-gray-50 cursor-pointer">
-                          <div className="flex items-center">
-                            {expandedGroups[group.groupName] ? (
-                              <ChevronDown className="h-5 w-5 mr-2" />
-                            ) : (
-                              <ChevronUp className="h-5 w-5 mr-2" />
-                            )}
-                            <span className="font-medium">{group.groupName}</span>
+                        <CollapsibleTrigger asChild>
+                          <div className="w-full p-4 flex items-center justify-between hover:bg-gray-50 cursor-pointer">
+                            <div className="flex items-center">
+                              {expandedGroups[group.groupName] ? (
+                                <ChevronUp className="h-5 w-5 mr-2" />
+                              ) : (
+                                <ChevronDown className="h-5 w-5 mr-2" />
+                              )}
+                              <span className="font-medium">{group.groupName}</span>
+                            </div>
+                            <span className="text-sm text-gray-500">
+                              ({group.children.length} records)
+                            </span>
                           </div>
-                          <span className="text-sm text-gray-500">
-                            ({group.children.length} records)
-                          </span>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           {group.children.map((record) => (
