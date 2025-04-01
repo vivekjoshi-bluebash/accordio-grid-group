@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { AgGridReact } from 'ag-grid-react';
 import 'ag-grid-community/styles/ag-grid.css';
@@ -8,6 +7,25 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Edit } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+// Define custom interfaces for our data types
+interface GroupData {
+  groupName: string;
+  children: IssueData[];
+}
+
+interface IssueData {
+  id: string;
+  source: string;
+  systemName: string;
+  siteId: string;
+  subjectId: string;
+  studyId: string;
+  folder: string;
+  status: string;
+  qualityScore: number;
+  severityLevel: string;
+}
 
 // Custom cell renderer for the action column
 const ActionCellRenderer = (props: ICellRendererParams) => {
@@ -22,13 +40,15 @@ const ActionCellRenderer = (props: ICellRendererParams) => {
 
 // Custom cell renderer for quality score with gauge visualization
 const QualityScoreRenderer = (props: ICellRendererParams) => {
-  const { value, data } = props;
+  // Safely access data properties with optional chaining
+  const value = props.value;
+  const severityLevel = props.data?.severityLevel;
   
   // Determine color based on severity
   let color = 'text-green-500';
-  if (data.severityLevel === 'High') {
+  if (severityLevel === 'High') {
     color = 'text-red-500';
-  } else if (data.severityLevel === 'Medium') {
+  } else if (severityLevel === 'Medium') {
     color = 'text-yellow-500';
   }
 
@@ -57,7 +77,7 @@ const QualityScoreRenderer = (props: ICellRendererParams) => {
 };
 
 // Mock data for the grid
-const mockData = [
+const mockData: GroupData[] = [
   {
     groupName: 'AE Grouped By User (Varsha Kishore (Varsha.k))',
     children: [
