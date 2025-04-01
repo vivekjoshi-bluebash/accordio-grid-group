@@ -1,12 +1,13 @@
+
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { AgGridReact } from 'ag-grid-react';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
-import { ColDef, GridReadyEvent, ICellRendererParams } from 'ag-grid-community';
+import { ICellRendererParams } from 'ag-grid-community';
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Edit } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Define custom interfaces for our data types
 interface GroupData {
@@ -27,8 +28,14 @@ interface IssueData {
   severityLevel: string;
 }
 
+// Create a custom interface for cell renderer props
+interface CellRendererProps {
+  data?: IssueData;
+  value?: any;
+}
+
 // Custom cell renderer for the action column
-const ActionCellRenderer = (props: ICellRendererParams) => {
+const ActionCellRenderer = (props: CellRendererProps) => {
   return (
     <div className="flex justify-center">
       <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600">
@@ -39,7 +46,7 @@ const ActionCellRenderer = (props: ICellRendererParams) => {
 };
 
 // Custom cell renderer for quality score with gauge visualization
-const QualityScoreRenderer = (props: ICellRendererParams) => {
+const QualityScoreRenderer = (props: CellRendererProps) => {
   // Safely access data properties with optional chaining
   const value = props.value;
   const severityLevel = props.data?.severityLevel;
@@ -50,6 +57,8 @@ const QualityScoreRenderer = (props: ICellRendererParams) => {
     color = 'text-red-500';
   } else if (severityLevel === 'Medium') {
     color = 'text-yellow-500';
+  } else if (severityLevel === 'Low') {
+    color = 'text-green-500';
   }
 
   return (
@@ -69,10 +78,35 @@ const QualityScoreRenderer = (props: ICellRendererParams) => {
             strokeWidth="3"
             strokeDasharray="75, 100"
           />
+          <text x="18" y="20" textAnchor="middle" fill="currentColor" fontSize="8">
+            {value}
+          </text>
           <line x1="18" y1="18" x2="28" y2="18" stroke="currentColor" strokeWidth="2" />
         </svg>
       </div>
     </div>
+  );
+};
+
+// Folder link renderer
+const FolderLinkRenderer = (props: CellRendererProps) => {
+  const folder = props.value;
+  
+  return (
+    <a href="#" className="text-blue-600 hover:underline font-medium">
+      {folder}
+    </a>
+  );
+};
+
+// System name renderer
+const SystemNameRenderer = (props: CellRendererProps) => {
+  const systemName = props.value;
+  
+  return (
+    <a href="#" className="text-blue-600 hover:underline font-medium">
+      {systemName}
+    </a>
   );
 };
 
@@ -142,7 +176,7 @@ export const DataQualityTable = () => {
   return (
     <div className="flex flex-col">
       <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="p-4 border-b flex items-center justify-between">
+        <div className="p-4 border-b flex items-center justify-between bg-gray-50">
           <h2 className="text-xl font-semibold">Data Quality Issues</h2>
           <div className="flex gap-2">
             <Button variant="outline" size="sm">
@@ -166,70 +200,97 @@ export const DataQualityTable = () => {
           </div>
         </div>
         <div className="w-full">
-          {visibleGroups.map((group) => (
-            <Collapsible 
-              key={group.groupName} 
-              open={expandedGroups[group.groupName]} 
-              onOpenChange={() => toggleGroup(group.groupName)}
-              className="border-b"
-            >
-              <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-gray-50 cursor-pointer">
-                <div className="flex items-center">
-                  {expandedGroups[group.groupName] ? (
-                    <ChevronDown className="h-5 w-5 mr-2" />
-                  ) : (
-                    <ChevronUp className="h-5 w-5 mr-2" />
-                  )}
-                  <span className="font-medium">{group.groupName}</span>
-                </div>
-                <span className="text-sm text-gray-500">
-                  ({group.children.length} records)
-                </span>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="p-4 bg-gray-50">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[80px]">Issue ID</TableHead>
-                        <TableHead>Source</TableHead>
-                        <TableHead>System Name</TableHead>
-                        <TableHead>Site ID</TableHead>
-                        <TableHead>Subject ID</TableHead>
-                        <TableHead>Study ID</TableHead>
-                        <TableHead>Folder/Visit</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Quality Score</TableHead>
-                        <TableHead>Severity Level</TableHead>
-                        <TableHead className="w-[80px]">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {group.children.map((record) => (
-                        <TableRow key={record.id}>
-                          <TableCell>{record.id}</TableCell>
-                          <TableCell>{record.source}</TableCell>
-                          <TableCell>{record.systemName}</TableCell>
-                          <TableCell>{record.siteId}</TableCell>
-                          <TableCell>{record.subjectId}</TableCell>
-                          <TableCell>{record.studyId}</TableCell>
-                          <TableCell>{record.folder}</TableCell>
-                          <TableCell>{record.status}</TableCell>
-                          <TableCell>
-                            <QualityScoreRenderer value={record.qualityScore} data={record} node={null} api={null} colDef={null} column={null} columnApi={null} context={null} rowIndex={0} eGridCell={null} eParentOfValue={null} valueFormatted={null} formatValue={null} getValue={null} isNodeSelected={null} registerRowDragger={null} />
-                          </TableCell>
-                          <TableCell>{record.severityLevel}</TableCell>
-                          <TableCell>
-                            <ActionCellRenderer value={null} data={record} node={null} api={null} colDef={null} column={null} columnApi={null} context={null} rowIndex={0} eGridCell={null} eParentOfValue={null} valueFormatted={null} formatValue={null} getValue={null} isNodeSelected={null} registerRowDragger={null} />
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          ))}
+          <Table>
+            <TableHeader className="bg-gray-100">
+              <TableRow>
+                <TableHead className="w-[40px]">
+                  <Checkbox />
+                </TableHead>
+                <TableHead className="w-[80px]">Issue ID</TableHead>
+                <TableHead>Source</TableHead>
+                <TableHead>System Name</TableHead>
+                <TableHead>Site ID</TableHead>
+                <TableHead>Subject ID</TableHead>
+                <TableHead>Study ID</TableHead>
+                <TableHead>Folder/Visit</TableHead>
+                <TableHead>Form/Domain</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Quality Score</TableHead>
+                <TableHead>Severity Level</TableHead>
+                <TableHead className="w-[80px]">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visibleGroups.map((group) => (
+                <React.Fragment key={group.groupName}>
+                  <TableRow 
+                    className="hover:bg-gray-100 cursor-pointer border-b-0"
+                    onClick={() => toggleGroup(group.groupName)}
+                  >
+                    <TableCell colSpan={13} className="p-0 border-b-0">
+                      <Collapsible 
+                        open={expandedGroups[group.groupName]} 
+                        onOpenChange={() => toggleGroup(group.groupName)}
+                      >
+                        <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-gray-50 cursor-pointer">
+                          <div className="flex items-center">
+                            {expandedGroups[group.groupName] ? (
+                              <ChevronDown className="h-5 w-5 mr-2" />
+                            ) : (
+                              <ChevronUp className="h-5 w-5 mr-2" />
+                            )}
+                            <span className="font-medium">{group.groupName}</span>
+                          </div>
+                          <span className="text-sm text-gray-500">
+                            ({group.children.length} records)
+                          </span>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          {group.children.map((record) => (
+                            <TableRow key={record.id} className="hover:bg-gray-50">
+                              <TableCell className="pl-10">
+                                <Checkbox />
+                              </TableCell>
+                              <TableCell>{record.id}</TableCell>
+                              <TableCell>{record.source}</TableCell>
+                              <TableCell>
+                                <SystemNameRenderer value={record.systemName} data={record} />
+                              </TableCell>
+                              <TableCell>
+                                <a href="#" className="text-blue-600 hover:underline font-medium">
+                                  {record.siteId}
+                                </a>
+                              </TableCell>
+                              <TableCell>{record.subjectId}</TableCell>
+                              <TableCell>{record.studyId}</TableCell>
+                              <TableCell>
+                                <FolderLinkRenderer value={record.folder} data={record} />
+                              </TableCell>
+                              <TableCell></TableCell>
+                              <TableCell>{record.status}</TableCell>
+                              <TableCell>
+                                <QualityScoreRenderer value={record.qualityScore} data={record} />
+                              </TableCell>
+                              <TableCell className={
+                                record.severityLevel === 'High' ? 'text-red-500' : 
+                                record.severityLevel === 'Medium' ? 'text-yellow-500' : 
+                                'text-green-500'
+                              }>
+                                {record.severityLevel}
+                              </TableCell>
+                              <TableCell>
+                                <ActionCellRenderer data={record} />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </TableCell>
+                  </TableRow>
+                </React.Fragment>
+              ))}
+            </TableBody>
+          </Table>
         </div>
         <div className="p-4 border-t flex items-center justify-between">
           <div className="flex items-center gap-2">
