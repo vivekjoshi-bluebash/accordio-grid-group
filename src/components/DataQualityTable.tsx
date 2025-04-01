@@ -4,10 +4,19 @@ import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 import { ICellRendererParams } from 'ag-grid-community';
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp, Edit } from 'lucide-react';
+import { ChevronDown, ChevronUp, Edit, MoreHorizontal, Ungroup, Pencil } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 // Define custom interfaces for our data types
 interface GroupData {
@@ -152,22 +161,27 @@ export const DataQualityTable = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
+  const [groupData, setGroupData] = useState<GroupData[]>(mockData);
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [currentGroup, setCurrentGroup] = useState<string>("");
+  const [newGroupName, setNewGroupName] = useState<string>("");
+  const [isUngroupDialogOpen, setIsUngroupDialogOpen] = useState(false);
 
   // Initialize all groups as collapsed
   useEffect(() => {
     const initialExpandedState: Record<string, boolean> = {};
-    mockData.forEach(group => {
+    groupData.forEach(group => {
       initialExpandedState[group.groupName] = false;
     });
     setExpandedGroups(initialExpandedState);
-  }, []);
+  }, [groupData]);
 
   // Calculate total pages and records
   useEffect(() => {
-    const recordCount = mockData.reduce((acc, group) => acc + group.children.length, 0);
+    const recordCount = groupData.reduce((acc, group) => acc + group.children.length, 0);
     setTotalRecords(recordCount);
-    setTotalPages(Math.ceil(mockData.length / recordsPerPage));
-  }, [recordsPerPage]);
+    setTotalPages(Math.ceil(groupData.length / recordsPerPage));
+  }, [recordsPerPage, groupData]);
 
   const toggleGroup = (groupName: string) => {
     console.log('Toggling group:', groupName);
@@ -190,8 +204,44 @@ export const DataQualityTable = () => {
   const visibleGroups = useMemo(() => {
     const startIndex = (currentPage - 1) * recordsPerPage;
     const endIndex = startIndex + recordsPerPage;
-    return mockData.slice(startIndex, endIndex);
-  }, [currentPage, recordsPerPage]);
+    return groupData.slice(startIndex, endIndex);
+  }, [currentPage, recordsPerPage, groupData]);
+
+  // Handle rename group
+  const handleRenameClick = (groupName: string) => {
+    setCurrentGroup(groupName);
+    setNewGroupName(groupName);
+    setIsRenameDialogOpen(true);
+  };
+
+  // Handle ungroup option
+  const handleUngroupClick = (groupName: string) => {
+    setCurrentGroup(groupName);
+    setIsUngroupDialogOpen(true);
+  };
+
+  // Complete the rename operation
+  const handleRenameComplete = () => {
+    if (newGroupName.trim()) {
+      setGroupData(prev => 
+        prev.map(group => 
+          group.groupName === currentGroup 
+            ? { ...group, groupName: newGroupName.trim() } 
+            : group
+        )
+      );
+      toast.success("Group renamed successfully.");
+    }
+    setIsRenameDialogOpen(false);
+  };
+
+  // Complete the ungroup operation
+  const handleUngroupComplete = () => {
+    // In a real app, this would contain logic to ungroup the selected group
+    // For this demo, we'll just show a success message
+    toast.success("Group ungrouped successfully.");
+    setIsUngroupDialogOpen(false);
+  };
 
   return (
     <div className="flex flex-col">
@@ -250,21 +300,40 @@ export const DataQualityTable = () => {
                         open={expandedGroups[group.groupName] || false} 
                         onOpenChange={() => toggleGroup(group.groupName)}
                       >
-                        <CollapsibleTrigger asChild>
-                          <div className="w-full p-4 flex items-center justify-between hover:bg-gray-50 cursor-pointer">
-                            <div className="flex items-center">
+                        <div className="w-full flex items-center justify-between hover:bg-gray-50 cursor-pointer">
+                          <CollapsibleTrigger asChild>
+                            <div className="flex items-center grow py-4 pl-4">
                               {expandedGroups[group.groupName] ? (
                                 <ChevronUp className="h-5 w-5 mr-2" />
                               ) : (
                                 <ChevronDown className="h-5 w-5 mr-2" />
                               )}
                               <span className="font-medium">{group.groupName}</span>
+                              <span className="text-sm text-gray-500 ml-2">
+                                ({group.children.length} records)
+                              </span>
                             </div>
-                            <span className="text-sm text-gray-500">
-                              ({group.children.length} records)
-                            </span>
+                          </CollapsibleTrigger>
+                          <div className="pr-4">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleUngroupClick(group.groupName)}>
+                                  <Ungroup className="mr-2 h-4 w-4" />
+                                  <span>Ungroup</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleRenameClick(group.groupName)}>
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  <span>Rename</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
-                        </CollapsibleTrigger>
+                        </div>
                         <CollapsibleContent>
                           {group.children.map((record) => (
                             <TableRow key={record.id} className="hover:bg-gray-50">
@@ -364,6 +433,51 @@ export const DataQualityTable = () => {
           </div>
         </div>
       </div>
+
+      {/* Rename Dialog */}
+      <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rename Group</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input 
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              placeholder="Enter new name for the group"
+              className="w-full"
+            />
+          </div>
+          <DialogFooter>
+            <Button 
+              type="submit" 
+              onClick={handleRenameComplete}
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ungroup Dialog */}
+      <Dialog open={isUngroupDialogOpen} onOpenChange={setIsUngroupDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ungroup Selections</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>Are you sure you want to ungroup "{currentGroup}"?</p>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="destructive"
+              onClick={handleUngroupComplete}
+            >
+              Ungroup
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
