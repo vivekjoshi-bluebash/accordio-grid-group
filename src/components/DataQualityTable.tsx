@@ -216,11 +216,11 @@ export const DataQualityTable = () => {
                           <TableCell>{record.folder}</TableCell>
                           <TableCell>{record.status}</TableCell>
                           <TableCell>
-                            <QualityScoreRenderer value={record.qualityScore} data={record} />
+                            <QualityScoreRenderer value={record.qualityScore} data={record} node={null} api={null} colDef={null} column={null} columnApi={null} context={null} rowIndex={0} eGridCell={null} eParentOfValue={null} valueFormatted={null} formatValue={null} getValue={null} isNodeSelected={null} registerRowDragger={null} />
                           </TableCell>
                           <TableCell>{record.severityLevel}</TableCell>
                           <TableCell>
-                            <ActionCellRenderer />
+                            <ActionCellRenderer value={null} data={record} node={null} api={null} colDef={null} column={null} columnApi={null} context={null} rowIndex={0} eGridCell={null} eParentOfValue={null} valueFormatted={null} formatValue={null} getValue={null} isNodeSelected={null} registerRowDragger={null} />
                           </TableCell>
                         </TableRow>
                       ))}
